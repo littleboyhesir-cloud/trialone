@@ -16,8 +16,19 @@ jobs:
         with:
           gradle-version: 8.7
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
-      - uses: actions/upload-artifact@v4
+        run: |
+          set -o pipefail
+          gradle assembleDebug --stacktrace 2>&1 | tee build.log
+      - name: Show errors on the summary page
+        if: failure()
+        run: |
+          echo '## Build errors' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          (grep -E '^e: |What went wrong' -A6 build.log || tail -60 build.log) | head -80 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
           name: StayFree-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
